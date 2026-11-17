@@ -1,19 +1,9 @@
 {
   "format_version": "1.8.0",
-  "animations": {
-    "animation.overdrive.bike_motion": {
-      "loop": true,
-      "bones": {
-        "front_wheel": {
-          "rotation": ["query.modified_move_speed * 18", 0, 0]
-        },
-        "rear_wheel": {
-          "rotation": ["query.modified_move_speed * 18", 0, 0]
-        },
-        "handlebar": {
-          "rotation": [0, "query.modified_move_speed * 2", 0]
-        }
-      }
-    }
-  }
+  "animations": { "animation.overdrive.bike_motion": { "loop": true, "bones": {
+    "front_wheel": { "rotation": [0, 0, "query.modified_move_speed * 90"] },
+    "rear_wheel": { "rotation": [0, 0, "query.modified_move_speed * 90"] },
+    "handlebar": { "rotation": [0, "math.sin(query.life_time * 2) * 2", 0] },
+    "fork": { "position": [0, "math.sin(query.life_time * 10) * query.modified_move_speed * 0.2", 0] }
+  } } }
 }

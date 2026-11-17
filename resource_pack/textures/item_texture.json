@@ -1,0 +1,9 @@
+{
+  "resource_pack_name": "project_overdrive",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "overdrive_helmet_carbon": { "textures": "textures/items/leather_helmet" },
+    "overdrive_helmet_gold": { "textures": "textures/items/golden_helmet" },
+    "overdrive_helmet_iron": { "textures": "textures/items/iron_helmet" }
+  }
+}

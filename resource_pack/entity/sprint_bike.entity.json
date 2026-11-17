@@ -1,0 +1,6 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": { "identifier": "overdrive:sprint_bike", "materials": { "default": "entity_alphatest" }, "textures": { "default": "textures/entity/horse/horse_white" }, "geometry": { "default": "geometry.overdrive.sprint_bike" }, "render_controllers": ["controller.render.overdrive.racer_bike"], "animations": { "bike_motion": "animation.overdrive.bike_motion" }, "scripts": { "animate": ["bike_motion"] }
+  }
+}
