@@ -2,9 +2,12 @@ import { system, world } from "@minecraft/server";
 import { HUD_INTERVAL_TICKS, MAX_LAPS, TICK_RATE, TRACK_CHECKPOINTS } from "./config.js";
 
 const bikeTypes = ["overdrive:racer_bike", "overdrive:sprint_bike", "overdrive:tour_bike"];
+const NEAR_RIVAL_DISTANCE = 10;
+const PROXIMITY_CUE_COOLDOWN_TICKS = 40;
 const racers = new Map();
 const lastGear = new Map();
 const bikeMotion = new Map();
+const lastProximityCue = new Map();
 let raceRunning = false;
 let countdown = 0;
 let elapsedTicks = 0;
@@ -36,19 +39,13 @@ function updateLean(bike, horizontalSpeed) {
   let yawDelta = yaw - previous.yaw;
   if (yawDelta > 180) yawDelta -= 360;
   if (yawDelta < -180) yawDelta += 360;
-
-  // Native ride controls rotate the mount. Turn-rate plus speed creates a stable lean cue;
-  // the smoothing prevents abrupt snapping when crossing the -180/180 degree boundary.
   const speedFactor = Math.min(1, horizontalSpeed / 0.12);
   const targetLean = Math.max(-1, Math.min(1, (-yawDelta / 5.0) * speedFactor));
   const lean = previous.lean + (targetLean - previous.lean) * 0.24;
   bikeMotion.set(bike.id, { yaw, lean });
-
   try {
     const synchronizedLean = bike.getProperty("overdrive:lean");
-    if (typeof synchronizedLean === "number" && Math.abs(synchronizedLean - lean) > 0.025) {
-      bike.setProperty("overdrive:lean", lean);
-    }
+    if (typeof synchronizedLean === "number" && Math.abs(synchronizedLean - lean) > 0.025) bike.setProperty("overdrive:lean", lean);
   } catch {
     // Older game builds may not support synchronized entity properties; the bike remains rideable.
   }
@@ -62,6 +59,7 @@ function startRace() {
   countdown = 3;
   elapsedTicks = 0;
   racers.clear();
+  lastProximityCue.clear();
   const mounted = riderIds();
   for (const player of world.getPlayers()) if (mounted.has(player.id)) racers.set(player.id, { lap: 1, checkpoint: 0, finished: false });
   if (racers.size === 0) {
@@ -75,12 +73,39 @@ function startRace() {
   system.runTimeout(() => { if (countdown !== 0) { countdown = 0; raceRunning = true; world.sendMessage("§a[OVERDRIVE] GO!"); } }, TICK_RATE * 3);
 }
 function resetRace() {
-  raceRunning = false; countdown = 0; elapsedTicks = 0; racers.clear();
+  raceRunning = false; countdown = 0; elapsedTicks = 0; racers.clear(); lastProximityCue.clear();
   world.sendMessage("§7[OVERDRIVE] Race state reset.");
 }
-function playSound(bike, soundId, options) {
-  try { bike.playSound(soundId, options); } catch { /* Audio is best-effort; gameplay must not depend on it. */ }
+function playSound(entity, soundId, options) {
+  try { entity.playSound(soundId, options); } catch { /* Audio is best-effort; gameplay must not depend on it. */ }
 }
+function playRivalProximityCues(activeRacers) {
+  if (!raceRunning || activeRacers.length < 2) return;
+  const radiusSquared = NEAR_RIVAL_DISTANCE * NEAR_RIVAL_DISTANCE;
+  const livePlayerIds = new Set(activeRacers.map(({ player }) => player.id));
+  for (const id of lastProximityCue.keys()) if (!livePlayerIds.has(id)) lastProximityCue.delete(id);
+
+  for (const racer of activeRacers) {
+    let nearestDistanceSquared = radiusSquared;
+    for (const rival of activeRacers) {
+      if (rival.player.id === racer.player.id || rival.bike.dimension.id !== racer.bike.dimension.id) continue;
+      const separationSquared = distanceSquared(racer.bike.location, rival.bike.location);
+      if (separationSquared < nearestDistanceSquared) nearestDistanceSquared = separationSquared;
+    }
+    if (nearestDistanceSquared >= radiusSquared) continue;
+    const lastCueTick = lastProximityCue.get(racer.player.id) ?? -PROXIMITY_CUE_COOLDOWN_TICKS;
+    if (hudTicks - lastCueTick < PROXIMITY_CUE_COOLDOWN_TICKS) continue;
+
+    const distance = Math.sqrt(nearestDistanceSquared);
+    // A restrained spatial cue lets the racer know a competitor is close without spamming every tick.
+    playSound(racer.player, "random.orb", {
+      volume: 0.35,
+      pitch: 0.8 + (1 - distance / NEAR_RIVAL_DISTANCE) * 0.45
+    });
+    lastProximityCue.set(racer.player.id, hudTicks);
+  }
+}
+
 world.afterEvents.scriptEventReceive.subscribe((event) => {
   if (event.id !== "overdrive:race") return;
   const action = event.message.trim().toLowerCase();
@@ -92,6 +117,7 @@ world.afterEvents.scriptEventReceive.subscribe((event) => {
 system.runInterval(() => {
   const bikes = getBikes();
   const currentRiders = new Set();
+  const activeRacers = [];
   const liveBikeIds = new Set(bikes.map((bike) => bike.id));
   for (const id of bikeMotion.keys()) if (!liveBikeIds.has(id)) bikeMotion.delete(id);
   for (const bike of bikes) {
@@ -107,10 +133,11 @@ system.runInterval(() => {
 
     for (const player of riders) {
       currentRiders.add(player.id);
+      const raceState = racers.get(player.id);
+      if (raceRunning && raceState && !raceState.finished) activeRacers.push({ player, bike });
       if (hudTicks % HUD_INTERVAL_TICKS === 0) {
-        const state = racers.get(player.id);
         const bikeLabel = bike.typeId.split(":")[1].replace("_bike", "").toUpperCase();
-        const race = state ? `L${state.lap}/${MAX_LAPS} CP${state.checkpoint + 1}/${TRACK_CHECKPOINTS.length} ${formatTime(elapsedTicks)}` : "FREE RIDE";
+        const race = raceState ? `L${raceState.lap}/${MAX_LAPS} CP${raceState.checkpoint + 1}/${TRACK_CHECKPOINTS.length} ${formatTime(elapsedTicks)}` : "FREE RIDE";
         player.onScreenDisplay.setActionBar(`§6${bikeLabel}  ${speedKmh} km/h  §fG${gear}  §e${race}`);
       }
     }
@@ -128,6 +155,7 @@ system.runInterval(() => {
     lastGear.set(bike.id, gear);
   }
 
+  playRivalProximityCues(activeRacers);
   if (raceRunning) {
     elapsedTicks++;
     for (const player of world.getPlayers()) {
