@@ -1,40 +1,19 @@
 # Project Overdrive
 
-A controller-friendly Minecraft Bedrock motorcycle racing add-on, developed in small testable stages.
+A controller-friendly Minecraft Bedrock motorcycle racing add-on, built in testable stages.
 
-## v0.2: bike variety, helmets, sound, dust, and lamp details
+## v0.3: cornering lean
 
-This iteration adds three rideable bike profiles, three vanilla-rendered wearable helmet items, subtle rear tire smoke/dust, speed-pitched motor-like sound feedback, gear-change clicks, and front/rear lamp geometry. See [`docs/v0.2-visual-audio.md`](docs/v0.2-visual-audio.md) for what is and is not included.
+Bikes now lean smoothly into turns based on their observed turn rate and speed. A synchronized entity property drives the bike-frame and handlebar animations; the lean fades smoothly back to upright. The rider seat has been repositioned lower and slightly forward to sit closer to the tank and reduce the floating look.
 
-### Spawn bike variants
+The player keeps Minecraft's native riding pose. This version deliberately avoids overriding the global player animation controller, which can break compatibility with skins and other packs; it does not yet add a custom rider torso/arm lean animation. See [`docs/v0.3-lean-and-rider-fit.md`](docs/v0.3-lean-and-rider-fit.md) for details and in-game test steps.
 
-```mcfunction
-/summon overdrive:racer_bike ~ ~ ~
-/summon overdrive:sprint_bike ~ ~ ~
-/summon overdrive:tour_bike ~ ~ ~
-```
+## Existing features
 
-All are rideable and supported by the speed HUD and race loop. The Sprint profile uses a higher native movement value; Touring uses a lower one. Bedrock controls movement and this is not a custom physics engine.
+Three rideable variants (`overdrive:racer_bike`, `overdrive:sprint_bike`, `overdrive:tour_bike`), helmet items, HUD, race countdown/checkpoints/laps, speed-linked sound cue, and tire smoke are included. Spawn bikes with `/summon overdrive:racer_bike`, `/summon overdrive:sprint_bike`, or `/summon overdrive:tour_bike`. Packs target Bedrock 1.21.80+ and stable `@minecraft/server` 2.0.0.
 
-### Get helmets
+Start a race with `/scriptevent overdrive:race start`. Edit ordered checkpoint positions in `behavior_pack/scripts/config.js` for your track. Enable both packs in a test world and inspect Content Log if anything fails to load.
 
-```mcfunction
-/give @s overdrive:helmet_carbon
-/give @s overdrive:helmet_gold
-/give @s overdrive:helmet_iron
-```
+## Controller and API limits
 
-Equip from inventory. These use vanilla helmet rendering/icons; original hand-painted helmet textures are a future asset pass.
-
-### Race
-
-```mcfunction
-/scriptevent overdrive:race start
-/scriptevent overdrive:race reset
-```
-
-Edit ordered checkpoint positions in `behavior_pack/scripts/config.js` for your circuit. Both packs must be imported and enabled. Minecraft Bedrock 1.21.80 or newer with stable `@minecraft/server` 2.0.0 is recommended.
-
-## Controls and limitations
-
-The bikes use the game's native ride controls. Add-on scripts do not get portable raw DualSense trigger/button binding. Sound uses built-in Minecraft audio as a prototype, and the tire effect uses a vanilla smoke particle; bespoke recordings and textures are not included. The lamp meshes are visible model details, not a dynamic light source. Bedrock must be launched to verify rendering, item equipping, sound IDs, and movement on the target version/platform.
+The bikes use Minecraft's native ride controls. Scripts do not receive portable raw DualSense button data. Rider animation is the vanilla mounted pose, not custom motorcycle-specific animation yet. Test synchronized leaning and seat placement in-game on each target Bedrock platform/version.

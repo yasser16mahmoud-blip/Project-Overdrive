@@ -4,6 +4,7 @@ import { HUD_INTERVAL_TICKS, MAX_LAPS, TICK_RATE, TRACK_CHECKPOINTS } from "./co
 const bikeTypes = ["overdrive:racer_bike", "overdrive:sprint_bike", "overdrive:tour_bike"];
 const racers = new Map();
 const lastGear = new Map();
+const bikeMotion = new Map();
 let raceRunning = false;
 let countdown = 0;
 let elapsedTicks = 0;
@@ -28,6 +29,29 @@ function riderIds() {
     if (rideable) for (const rider of rideable.getRiders()) ids.add(rider.id);
   }
   return ids;
+}
+function updateLean(bike, horizontalSpeed) {
+  const yaw = bike.getRotation().y;
+  const previous = bikeMotion.get(bike.id) ?? { yaw, lean: 0 };
+  let yawDelta = yaw - previous.yaw;
+  if (yawDelta > 180) yawDelta -= 360;
+  if (yawDelta < -180) yawDelta += 360;
+
+  // Native ride controls rotate the mount. Turn-rate plus speed creates a stable lean cue;
+  // the smoothing prevents abrupt snapping when crossing the -180/180 degree boundary.
+  const speedFactor = Math.min(1, horizontalSpeed / 0.12);
+  const targetLean = Math.max(-1, Math.min(1, (-yawDelta / 5.0) * speedFactor));
+  const lean = previous.lean + (targetLean - previous.lean) * 0.24;
+  bikeMotion.set(bike.id, { yaw, lean });
+
+  try {
+    const synchronizedLean = bike.getProperty("overdrive:lean");
+    if (typeof synchronizedLean === "number" && Math.abs(synchronizedLean - lean) > 0.025) {
+      bike.setProperty("overdrive:lean", lean);
+    }
+  } catch {
+    // Older game builds may not support synchronized entity properties; the bike remains rideable.
+  }
 }
 function startRace() {
   if (TRACK_CHECKPOINTS.length < 2) {
@@ -68,11 +92,14 @@ world.afterEvents.scriptEventReceive.subscribe((event) => {
 system.runInterval(() => {
   const bikes = getBikes();
   const currentRiders = new Set();
+  const liveBikeIds = new Set(bikes.map((bike) => bike.id));
+  for (const id of bikeMotion.keys()) if (!liveBikeIds.has(id)) bikeMotion.delete(id);
   for (const bike of bikes) {
     const rideable = bike.getComponent("minecraft:rideable");
     if (!rideable) continue;
     const velocity = bike.getVelocity();
     const horizontalSpeed = Math.sqrt(velocity.x ** 2 + velocity.z ** 2);
+    updateLean(bike, horizontalSpeed);
     const speedKmh = Math.round(horizontalSpeed * TICK_RATE * 3.6);
     const gear = Math.max(1, Math.min(6, Math.floor(speedKmh / 25) + 1));
     const riders = rideable.getRiders();
@@ -89,13 +116,11 @@ system.runInterval(() => {
     }
 
     if (riders.length > 0 && moving) {
-      // Built-in minecart sound used as a temporary motor-like tone; pitch follows measured speed.
       if (hudTicks % 10 === 0) playSound(bike, "minecart.riding", { volume: Math.min(0.7, 0.2 + horizontalSpeed * 0.45), pitch: Math.min(1.7, 0.7 + horizontalSpeed * 1.5) });
-      // Lightweight tire dust puffs from the rear axle, at a restrained interval.
       if (hudTicks % 8 === 0) {
         const rotation = bike.getRotation().y * Math.PI / 180;
         const rear = { x: bike.location.x - Math.sin(rotation) * 0.55, y: bike.location.y + 0.12, z: bike.location.z + Math.cos(rotation) * 0.55 };
-        try { bike.dimension.spawnParticle("minecraft:basic_smoke_particle", rear); } catch { /* Particle support is cosmetic and must not interrupt the race. */ }
+        try { bike.dimension.spawnParticle("minecraft:basic_smoke_particle", rear); } catch { /* Cosmetic effect only. */ }
       }
       const gearBefore = lastGear.get(bike.id);
       if (gearBefore !== undefined && gearBefore !== gear) playSound(bike, "random.click", { volume: 0.3, pitch: gear > gearBefore ? 1.2 : 0.8 });

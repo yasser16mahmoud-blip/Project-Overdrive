@@ -1,7 +1,15 @@
 {
   "format_version": "1.20.80",
   "minecraft:entity": {
-    "description": { "identifier": "overdrive:racer_bike", "is_spawnable": true, "is_summonable": true, "is_experimental": false },
+    "description": {
+      "identifier": "overdrive:racer_bike",
+      "is_spawnable": true,
+      "is_summonable": true,
+      "is_experimental": false,
+      "properties": {
+        "overdrive:lean": { "type": "float", "range": [-1.0, 1.0], "default": 0.0, "client_sync": true }
+      }
+    },
     "components": {
       "minecraft:type_family": { "family": ["overdrive_bike", "vehicle"] },
       "minecraft:health": { "value": 50, "max": 50 },
@@ -12,7 +20,7 @@
       "minecraft:movement.basic": {},
       "minecraft:navigation.walk": { "can_path_over_water": false, "avoid_water": true, "can_pass_doors": false, "can_open_doors": false, "can_walk": true },
       "minecraft:input_ground_controlled": {},
-      "minecraft:rideable": { "seat_count": 1, "family_types": ["player"], "crouching_skip_interact": true, "interact_text": "Mount Overdrive GP", "seats": { "position": [0, 0.65, -0.15] } },
+      "minecraft:rideable": { "seat_count": 1, "family_types": ["player"], "crouching_skip_interact": true, "interact_text": "Mount Overdrive GP", "seats": { "position": [0, 0.42, -0.15] } },
       "minecraft:despawn": { "despawn_from_distance": {} }
     }
   }
