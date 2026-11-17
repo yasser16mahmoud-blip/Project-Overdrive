@@ -1,0 +1,34 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Project Overdrive Behavior Pack",
+    "description": "Rideable motorcycle racing and checkpoint scripts",
+    "uuid": "3bf6b80f-7c14-4c75-9e03-bc84b8e4f013",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 80]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "297f902e-019c-49dd-a682-1fc62f861aae",
+      "version": [1, 0, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "e838ef90-1fb6-47f3-a08b-5ed68a501ba4",
+      "version": [1, 0, 0],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "83943b0b-fca5-4e8a-b57d-1f91edcbdba7",
+      "version": [1, 0, 0]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.0.0"
+    }
+  ]
+}

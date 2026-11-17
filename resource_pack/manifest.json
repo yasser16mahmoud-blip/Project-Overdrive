@@ -1,0 +1,17 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Project Overdrive Resource Pack",
+    "description": "Blocky motorcycle model for Project Overdrive",
+    "uuid": "83943b0b-fca5-4e8a-b57d-1f91edcbdba7",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 80]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "6178bc22-f7b8-4faf-a2ed-79802ec5b66a",
+      "version": [1, 0, 0]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "format_version": 2,
+  "animation_controllers": {
+    "controller.animation.overdrive.bike": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "animations": ["bike_motion"]
+        }
+      }
+    }
+  }
+}
